@@ -120,6 +120,7 @@ struct redisServer server; /* server global state */
  *    Note that commands that may trigger a DEL as a side effect (like SET)
  *    are not fast commands.
  */
+void redistorliteCommand(redisClient *c);
 struct redisCommand redisCommandTable[] = {
     {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
     {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -170,26 +171,26 @@ struct redisCommand redisCommandTable[] = {
     {"sdiffstore",sdiffstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
     {"smembers",sinterCommand,2,"rS",0,NULL,1,1,1,0,0},
     {"sscan",sscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
-    {"zadd",zaddCommand,-4,"wmF",0,NULL,1,1,1,0,0},
-    {"zincrby",zincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
-    {"zrem",zremCommand,-3,"wF",0,NULL,1,1,1,0,0},
-    {"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,NULL,1,1,1,0,0},
-    {"zremrangebyrank",zremrangebyrankCommand,4,"w",0,NULL,1,1,1,0,0},
-    {"zremrangebylex",zremrangebylexCommand,4,"w",0,NULL,1,1,1,0,0},
-    {"zunionstore",zunionstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
-    {"zinterstore",zinterstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
-    {"zrange",zrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
-    {"zrangebyscore",zrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
-    {"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
-    {"zrangebylex",zrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
-    {"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
-    {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
-    {"zlexcount",zlexcountCommand,4,"rF",0,NULL,1,1,1,0,0},
-    {"zrevrange",zrevrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
-    {"zcard",zcardCommand,2,"rF",0,NULL,1,1,1,0,0},
-    {"zscore",zscoreCommand,3,"rF",0,NULL,1,1,1,0,0},
-    {"zrank",zrankCommand,3,"rF",0,NULL,1,1,1,0,0},
-    {"zrevrank",zrevrankCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"zadd",redistorliteCommand,-4,"wmF",0,NULL,1,1,1,0,0},
+    {"zincrby",redistorliteCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"zrem",redistorliteCommand,-3,"wF",0,NULL,1,1,1,0,0},
+    {"zremrangebyscore",redistorliteCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"zremrangebyrank",redistorliteCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"zremrangebylex",redistorliteCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"zunionstore",redistorliteCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
+    {"zinterstore",redistorliteCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
+    {"zrange",redistorliteCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrangebyscore",redistorliteCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrevrangebyscore",redistorliteCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrangebylex",redistorliteCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrevrangebylex",redistorliteCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zcount",redistorliteCommand,4,"rF",0,NULL,1,1,1,0,0},
+    {"zlexcount",redistorliteCommand,4,"rF",0,NULL,1,1,1,0,0},
+    {"zrevrange",redistorliteCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zcard",redistorliteCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"zscore",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"zrank",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"zrevrank",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
     {"zscan",zscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
     {"hset",hsetCommand,4,"wmF",0,NULL,1,1,1,0,0},
     {"hsetnx",hsetnxCommand,4,"wmF",0,NULL,1,1,1,0,0},
@@ -1729,6 +1730,7 @@ void initServer(void) {
     adjustOpenFilesLimit();
     server.el = aeCreateEventLoop(server.maxclients+REDIS_EVENTLOOP_FDSET_INCR);
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
+    server.rlite = rliteConnect(":memory:", 0);
 
     /* Open the TCP listening socket for the user commands. */
     if (server.port != 0 &&
@@ -3017,6 +3019,51 @@ void monitorCommand(redisClient *c) {
     c->flags |= (REDIS_SLAVE|REDIS_MONITOR);
     listAddNodeTail(server.monitors,c);
     addReply(c,shared.ok);
+}
+
+static void addRliteReply(redisClient *c, rliteReply *reply) {
+    size_t i;
+    if (reply->type == RLITE_REPLY_STRING) {
+        addReplyBulkCBuffer(c, reply->str, reply->len);
+    } else if (reply->type == RLITE_REPLY_ARRAY) {
+        addReplyMultiBulkLen(c, reply->elements);
+        for (i = 0; i < reply->elements; i++) {
+            addRliteReply(c, reply->element[i]);
+        }
+    } else if (reply->type == RLITE_REPLY_INTEGER) {
+        addReplyLongLong(c, reply->integer);
+    } else if (reply->type == RLITE_REPLY_NIL) {
+        addReply(c, shared.nullbulk);
+    } else if (reply->type == RLITE_REPLY_STATUS) {
+        addReplyStatus(c, reply->str);
+    } else if (reply->type == RLITE_REPLY_ERROR) {
+        addReplyError(c, reply->str);
+    }
+}
+
+void redistorliteCommandReply(redisClient *c, void **reply) {
+    int i, argc = c->argc;
+    char **argv = zmalloc(sizeof(char *) * argc);
+    size_t *argvlen = zmalloc(sizeof(size_t) * argc);
+    for (i = 0; i < argc; i++) {
+        argv[i] = (char *)c->argv[i]->ptr;
+        argvlen[i] = sdslen(c->argv[i]->ptr);
+    }
+    *reply = rliteCommandArgv(server.rlite, argc, (const char **)argv, (const size_t *)argvlen);
+    zfree(argv);
+    zfree(argvlen);
+}
+
+void redistorliteCommand(redisClient *c) {
+    void *reply;
+    redistorliteCommandReply(c, &reply);
+    if (reply) {
+        addRliteReply(c, reply);
+        rliteFreeReplyObject(reply);
+    } else {
+        addReplyErrorFormat(c,"no reply for command '%s'",
+            (char*)c->argv[0]->ptr);
+    }
 }
 
 /* ============================ Maxmemory directive  ======================== */

@@ -253,6 +253,20 @@ void computeDatasetDigest(unsigned char *final) {
 }
 
 void debugCommand(redisClient *c) {
+    char *argv[2];
+    argv[0] = "exists";
+    argv[1] = c->argv[2]->ptr;
+    size_t *argvlen[2];
+    argvlen[0] = strlen(argv[0]);
+    argvlen[1] = sdslen(c->argv[2]->ptr);
+    rliteReply *reply = rliteCommandArgv(server.rlite, 2, argv, argvlen);
+    if (reply->type == RLITE_REPLY_INTEGER && reply->integer == 1) {
+        rliteFreeReplyObject(reply);
+        redistorliteCommand(c);
+        return;
+    }
+    rliteFreeReplyObject(reply);
+
     if (!strcasecmp(c->argv[1]->ptr,"segfault")) {
         *((char*)-1) = 'x';
     } else if (!strcasecmp(c->argv[1]->ptr,"oom")) {

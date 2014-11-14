@@ -1,0 +1,3 @@
+[submodule "deps/hirlite"]
+	path = deps/hirlite
+	url = git@bitbucket.org:seppo0010/hirlite.git

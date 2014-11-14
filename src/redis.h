@@ -65,6 +65,7 @@ typedef long long mstime_t; /* millisecond time type. */
 #include "util.h"    /* Misc functions useful in many places */
 #include "latency.h" /* Latency monitor API */
 #include "sparkline.h" /* ASII graphs API */
+#include "hirlite.h"
 
 /* Error codes */
 #define REDIS_OK                0
@@ -643,6 +644,7 @@ struct clusterState;
 #endif
 
 struct redisServer {
+    rliteContext* rlite;
     /* General */
     pid_t pid;                  /* Main process pid. */
     char *configfile;           /* Absolute config file path, or NULL */
@@ -1213,6 +1215,8 @@ unsigned int zsetLength(robj *zobj);
 void zsetConvert(robj *zobj, int encoding);
 unsigned long zslGetRank(zskiplist *zsl, double score, robj *o);
 
+void redistorliteCommandReply(redisClient *c, void **reply);
+void redistorliteCommand(redisClient *c);
 /* Core functions */
 int freeMemoryIfNeeded(void);
 int processCommand(redisClient *c);

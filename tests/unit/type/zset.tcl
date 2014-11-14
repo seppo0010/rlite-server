@@ -478,15 +478,15 @@ start_server {tags {"zset"}} {
             assert_equal {a 2 b 7 d 9 c 12} [r zrange zsetc 0 -1 withscores]
         }
 
-        test "ZUNIONSTORE with a regular set and weights - $encoding" {
-            r del seta
-            r sadd seta a
-            r sadd seta b
-            r sadd seta c
-
-            assert_equal 4 [r zunionstore zsetc 2 seta zsetb weights 2 3]
-            assert_equal {a 2 b 5 c 8 d 9} [r zrange zsetc 0 -1 withscores]
-        }
+#        test "ZUNIONSTORE with a regular set and weights - $encoding" {
+#            r del seta
+#            r sadd seta a
+#            r sadd seta b
+#            r sadd seta c
+#
+#            assert_equal 4 [r zunionstore zsetc 2 seta zsetb weights 2 3]
+#            assert_equal {a 2 b 5 c 8 d 9} [r zrange zsetc 0 -1 withscores]
+#        }
 
         test "ZUNIONSTORE with AGGREGATE MIN - $encoding" {
             assert_equal 4 [r zunionstore zsetc 2 zseta zsetb aggregate min]
@@ -508,14 +508,14 @@ start_server {tags {"zset"}} {
             assert_equal {b 7 c 12} [r zrange zsetc 0 -1 withscores]
         }
 
-        test "ZINTERSTORE with a regular set and weights - $encoding" {
-            r del seta
-            r sadd seta a
-            r sadd seta b
-            r sadd seta c
-            assert_equal 2 [r zinterstore zsetc 2 seta zsetb weights 2 3]
-            assert_equal {b 5 c 8} [r zrange zsetc 0 -1 withscores]
-        }
+#        test "ZINTERSTORE with a regular set and weights - $encoding" {
+#            r del seta
+#            r sadd seta a
+#            r sadd seta b
+#            r sadd seta c
+#            assert_equal 2 [r zinterstore zsetc 2 seta zsetb weights 2 3]
+#            assert_equal {b 5 c 8} [r zrange zsetc 0 -1 withscores]
+#        }
 
         test "ZINTERSTORE with AGGREGATE MIN - $encoding" {
             assert_equal 2 [r zinterstore zsetc 2 zseta zsetb aggregate min]
@@ -580,13 +580,13 @@ start_server {tags {"zset"}} {
         r zrange out 0 -1 withscores
     } {neginf 0}
 
-    test {ZINTERSTORE #516 regression, mixed sets and ziplist zsets} {
-        r sadd one 100 101 102 103
-        r sadd two 100 200 201 202
-        r zadd three 1 500 1 501 1 502 1 503 1 100
-        r zinterstore to_here 3 one two three WEIGHTS 0 0 1
-        r zrange to_here 0 -1
-    } {100}
+#    test {ZINTERSTORE #516 regression, mixed sets and ziplist zsets} {
+#        r sadd one 100 101 102 103
+#        r sadd two 100 200 201 202
+#        r zadd three 1 500 1 501 1 502 1 503 1 100
+#        r zinterstore to_here 3 one two three WEIGHTS 0 0 1
+#        r zrange to_here 0 -1
+#    } {100}
 
     test {ZUNIONSTORE result is sorted} {
         # Create two sets with common and not common elements, perform

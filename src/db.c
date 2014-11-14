@@ -280,6 +280,13 @@ void flushallCommand(redisClient *c) {
 void delCommand(redisClient *c) {
     int deleted = 0, j;
 
+    rliteReply *reply;
+    redistorliteCommandReply(c, (void **)&reply);
+    if (reply->type == RLITE_REPLY_INTEGER && reply->integer > 0) {
+        deleted += reply->integer;
+    }
+    rliteFreeReplyObject(reply);
+
     for (j = 1; j < c->argc; j++) {
         expireIfNeeded(c->db,c->argv[j]);
         if (dbDelete(c->db,c->argv[j])) {
@@ -294,8 +301,16 @@ void delCommand(redisClient *c) {
 }
 
 void existsCommand(redisClient *c) {
+    int exists = 0;
+    rliteReply *reply;
+    redistorliteCommandReply(c, (void **)&reply);
+    if (reply->type == RLITE_REPLY_INTEGER && reply->integer > 0) {
+        exists = 1;
+    }
+    rliteFreeReplyObject(reply);
+
     expireIfNeeded(c->db,c->argv[1]);
-    if (dbExists(c->db,c->argv[1])) {
+    if (exists || dbExists(c->db,c->argv[1])) {
         addReply(c, shared.cone);
     } else {
         addReply(c, shared.czero);
