@@ -256,12 +256,13 @@ void debugCommand(redisClient *c) {
     char *argv[2];
     argv[0] = "exists";
     argv[1] = c->argv[2]->ptr;
-    size_t *argvlen[2];
+    size_t argvlen[2];
     argvlen[0] = strlen(argv[0]);
     argvlen[1] = sdslen(c->argv[2]->ptr);
-    rliteReply *reply = rliteCommandArgv(server.rlite, 2, argv, argvlen);
+    rliteReply *reply = rliteCommandArgv(server.rlite, 2, (const char **)argv, (const size_t *)argvlen);
     if (reply->type == RLITE_REPLY_INTEGER && reply->integer == 1) {
         rliteFreeReplyObject(reply);
+        server.rlite->debugSkiplist = server.zset_max_ziplist_value == 0;
         redistorliteCommand(c);
         return;
     }
