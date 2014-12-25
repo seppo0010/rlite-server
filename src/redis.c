@@ -3049,7 +3049,7 @@ void redistorliteCommandReply(redisClient *c, void **reply) {
         argv[i] = (char *)c->argv[i]->ptr;
         argvlen[i] = sdslen(c->argv[i]->ptr);
     }
-    *reply = rliteCommandArgv(server.rlite, argc, (const char **)argv, (const size_t *)argvlen);
+    *reply = rliteCommandArgv(server.rlite, argc, argv, argvlen);
     zfree(argv);
     zfree(argvlen);
 }
