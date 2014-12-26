@@ -192,19 +192,19 @@ struct redisCommand redisCommandTable[] = {
     {"zrank",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
     {"zrevrank",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
     {"zscan",zscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
-    {"hset",hsetCommand,4,"wmF",0,NULL,1,1,1,0,0},
-    {"hsetnx",hsetnxCommand,4,"wmF",0,NULL,1,1,1,0,0},
-    {"hget",hgetCommand,3,"rF",0,NULL,1,1,1,0,0},
-    {"hmset",hmsetCommand,-4,"wm",0,NULL,1,1,1,0,0},
-    {"hmget",hmgetCommand,-3,"r",0,NULL,1,1,1,0,0},
-    {"hincrby",hincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
-    {"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,NULL,1,1,1,0,0},
-    {"hdel",hdelCommand,-3,"wF",0,NULL,1,1,1,0,0},
-    {"hlen",hlenCommand,2,"rF",0,NULL,1,1,1,0,0},
-    {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
-    {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
-    {"hgetall",hgetallCommand,2,"r",0,NULL,1,1,1,0,0},
-    {"hexists",hexistsCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"hset",redistorliteCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hsetnx",redistorliteCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hget",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"hmset",redistorliteCommand,-4,"wm",0,NULL,1,1,1,0,0},
+    {"hmget",redistorliteCommand,-3,"r",0,NULL,1,1,1,0,0},
+    {"hincrby",redistorliteCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hincrbyfloat",redistorliteCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hdel",redistorliteCommand,-3,"wF",0,NULL,1,1,1,0,0},
+    {"hlen",redistorliteCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"hkeys",redistorliteCommand,2,"rS",0,NULL,1,1,1,0,0},
+    {"hvals",redistorliteCommand,2,"rS",0,NULL,1,1,1,0,0},
+    {"hgetall",redistorliteCommand,2,"r",0,NULL,1,1,1,0,0},
+    {"hexists",redistorliteCommand,3,"rF",0,NULL,1,1,1,0,0},
     {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
     {"incrby",incrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
     {"decrby",decrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
@@ -3021,7 +3021,7 @@ void monitorCommand(redisClient *c) {
     addReply(c,shared.ok);
 }
 
-static void addRliteReply(redisClient *c, rliteReply *reply) {
+void addRliteReply(redisClient *c, rliteReply *reply) {
     size_t i;
     if (reply->type == RLITE_REPLY_STRING) {
         addReplyBulkCBuffer(c, reply->str, reply->len);

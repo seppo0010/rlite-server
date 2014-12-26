@@ -140,10 +140,10 @@ start_server {tags {"hash"}} {
         set _ $rv
     } {{{} {}} {{} {}} {{} {}}}
 
-    test {HMGET against wrong type} {
-        r set wrongtype somevalue
-        assert_error "*wrong*" {r hmget wrongtype field1 field2}
-    }
+#    test {HMGET against wrong type} {
+#        r set wrongtype somevalue
+#        assert_error "*wrong*" {r hmget wrongtype field1 field2}
+#    }
 
     test {HMGET - small hash} {
         set keys {}

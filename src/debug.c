@@ -260,10 +260,12 @@ void debugCommand(redisClient *c) {
         argv[1] = c->argv[2]->ptr;
         argvlen[0] = strlen(argv[0]);
         argvlen[1] = sdslen(c->argv[2]->ptr);
-        rliteReply *reply = rliteCommandArgv(server.rlite, 2, (const char **)argv, (const size_t *)argvlen);
+        rliteReply *reply = rliteCommandArgv(server.rlite, 2, argv, argvlen);
         if (reply->type == RLITE_REPLY_INTEGER && reply->integer == 1) {
             rliteFreeReplyObject(reply);
             server.rlite->debugSkiplist = server.zset_max_ziplist_value == 0;
+            server.rlite->hashtableLimitEntries = server.hash_max_ziplist_entries;
+            server.rlite->hashtableLimitValue = server.hash_max_ziplist_value;
             redistorliteCommand(c);
             return;
         }

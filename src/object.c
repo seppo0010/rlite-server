@@ -702,6 +702,16 @@ robj *objectCommandLookupOrReply(redisClient *c, robj *key, robj *reply) {
 void objectCommand(redisClient *c) {
     robj *o;
 
+    rliteReply *reply;
+    redistorliteCommandReply(c, (void **)&reply);
+    fprintf(stderr, "replu type is %d\n", reply->type);
+    if (reply->type != RLITE_REPLY_NIL) {
+        addRliteReply(c, reply);
+        rliteFreeReplyObject(reply);
+        return;
+    }
+    rliteFreeReplyObject(reply);
+
     if (!strcasecmp(c->argv[1]->ptr,"refcount") && c->argc == 3) {
         if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))
                 == NULL) return;
