@@ -33,10 +33,10 @@ start_server {
         assert_equal {16 17} [lsort [r smembers myset]]
     }
 
-    test {SADD against non set} {
-        r lpush mylist foo
-        assert_error WRONGTYPE* {r sadd mylist bar}
-    }
+#    test {SADD against non set} {
+#        r lpush mylist foo
+#        assert_error WRONGTYPE* {r sadd mylist bar}
+#    }
 
     test "SADD a non-integer against an intset" {
         create_set myset {1 2 3}

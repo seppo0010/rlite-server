@@ -704,7 +704,6 @@ void objectCommand(redisClient *c) {
 
     rliteReply *reply;
     redistorliteCommandReply(c, (void **)&reply);
-    fprintf(stderr, "replu type is %d\n", reply->type);
     if (reply->type != RLITE_REPLY_NIL) {
         addRliteReply(c, reply);
         rliteFreeReplyObject(reply);
