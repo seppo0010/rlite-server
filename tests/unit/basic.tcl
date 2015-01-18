@@ -285,11 +285,11 @@ start_server {tags {"basic"}} {
     }
 
     test "DEL against expired key" {
-        r debug set-active-expire 0
+#        r debug set-active-expire 0
         r setex keyExpire 1 valExpire
         after 1100
         assert_equal 0 [r del keyExpire]
-        r debug set-active-expire 1
+#        r debug set-active-expire 1
     }
 
     test {EXISTS} {
