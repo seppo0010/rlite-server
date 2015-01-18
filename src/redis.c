@@ -213,7 +213,7 @@ struct redisCommand redisCommandTable[] = {
     {"mset",redistorliteCommand,-3,"wm",0,NULL,1,-1,2,0,0},
     {"msetnx",redistorliteCommand,-3,"wm",0,NULL,1,-1,2,0,0},
     {"randomkey",redistorliteCommand,1,"rR",0,NULL,0,0,0,0,0},
-    {"select",selectCommand,2,"rlF",0,NULL,0,0,0,0,0},
+    {"select",redistorliteCommand,2,"rlF",0,NULL,0,0,0,0,0},
     {"move",redistorliteCommand,3,"wF",0,NULL,1,1,1,0,0},
     {"rename",redistorliteCommand,3,"w",0,NULL,1,2,1,0,0},
     {"renamenx",redistorliteCommand,3,"wF",0,NULL,1,2,1,0,0},
