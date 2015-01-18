@@ -3037,7 +3037,7 @@ void addRliteReply(redisClient *c, rliteReply *reply) {
     } else if (reply->type == RLITE_REPLY_STATUS) {
         addReplyStatus(c, reply->str);
     } else if (reply->type == RLITE_REPLY_ERROR) {
-        addReplyError(c, reply->str);
+        addHirliteReplyError(c, reply->str, reply->len);
     }
 }
 

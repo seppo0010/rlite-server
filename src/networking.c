@@ -356,6 +356,11 @@ void addReplyErrorLength(redisClient *c, char *s, size_t len) {
 void addReplyError(redisClient *c, char *err) {
     addReplyErrorLength(c,err,strlen(err));
 }
+void addHirliteReplyError(redisClient *c, char *err, size_t len) {
+    addReplyString(c,"-",1);
+    addReplyString(c,err,len);
+    addReplyString(c,"\r\n",2);
+}
 
 void addReplyErrorFormat(redisClient *c, const char *fmt, ...) {
     size_t l, j;
