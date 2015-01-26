@@ -31,6 +31,7 @@
 #include "redis.h"
 #include "cluster.h"
 #include "endianconv.h"
+#include "../deps/rlite/src/rlite.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -4375,10 +4376,12 @@ void migrateCommand(redisClient *c) {
     int fd, copy, replace, j;
     long timeout;
     long dbid;
-    long long ttl, expireat;
-    robj *o;
-    rio cmd, payload;
+    unsigned long long ttl, expireat, now;
+    rio cmd;
     int retry_num = 0;
+    unsigned char *data;
+    long datalen;
+    int retval;
 
 try_again:
     /* Initialization */
@@ -4408,14 +4411,21 @@ try_again:
     /* Check if the key is here. If not we reply with success as there is
      * nothing to migrate (for instance the key expired in the meantime), but
      * we include such information in the reply string. */
-    if ((o = lookupKeyRead(c->db,c->argv[3])) == NULL) {
+    retval = rl_dump(server.rlite->db, c->argv[3]->ptr, sdslen(c->argv[3]->ptr), &data, &datalen);
+    if (retval == RL_NOT_FOUND) {
         addReplySds(c,sdsnew("+NOKEY\r\n"));
+        return;
+    } else if (retval != RL_OK) {
+        addReplySds(c,sdsnew("+ERR unexpected\r\n"));
         return;
     }
 
     /* Connect */
     fd = migrateGetSocket(c,c->argv[1],c->argv[2],timeout);
-    if (fd == -1) return; /* error sent to the client by migrateGetSocket() */
+    if (fd == -1) {
+        rl_free(data);
+        return; /* error sent to the client by migrateGetSocket() */
+    }
 
     /* Create RESTORE payload and generate the protocol to call the command. */
     rioInitWithBuffer(&cmd,sdsempty());
@@ -4423,10 +4433,18 @@ try_again:
     redisAssertWithInfo(c,NULL,rioWriteBulkString(&cmd,"SELECT",6));
     redisAssertWithInfo(c,NULL,rioWriteBulkLongLong(&cmd,dbid));
 
-    expireat = getExpire(c->db,c->argv[3]);
-    if (expireat != -1) {
-        ttl = expireat-mstime();
-        if (ttl < 1) ttl = 1;
+    retval = rl_key_get(server.rlite->db, c->argv[3]->ptr, sdslen(c->argv[3]->ptr), NULL, NULL, NULL, &expireat);
+    if (retval != RL_FOUND) {
+        rl_free(data);
+        return;
+    }
+    if (expireat != 0) {
+        now = rl_mstime();
+        if (expireat > now) {
+            ttl = expireat - now;
+        } else {
+            ttl = 1;
+        }
     }
     redisAssertWithInfo(c,NULL,rioWriteBulkCount(&cmd,'*',replace ? 5 : 4));
     if (server.cluster_enabled)
@@ -4441,10 +4459,8 @@ try_again:
 
     /* Emit the payload argument, that is the serialized object using
      * the DUMP format. */
-    createDumpPayload(&payload,o);
-    redisAssertWithInfo(c,NULL,rioWriteBulkString(&cmd,payload.io.buffer.ptr,
-                                sdslen(payload.io.buffer.ptr)));
-    sdsfree(payload.io.buffer.ptr);
+    redisAssertWithInfo(c,NULL,rioWriteBulkString(&cmd,(char *)data,datalen));
+    rl_free(data);
 
     /* Add the REPLACE option to the RESTORE command if it was specified
      * as a MIGRATE option. */
@@ -4484,7 +4500,7 @@ try_again:
 
             if (!copy) {
                 /* No COPY option: remove the local key, signal the change. */
-                dbDelete(c->db,c->argv[3]);
+                rl_key_delete_with_value(server.rlite->db, c->argv[3]->ptr, sdslen(c->argv[3]->ptr));
                 signalModifiedKey(c->db,c->argv[3]);
             }
             addReply(c,shared.ok);
