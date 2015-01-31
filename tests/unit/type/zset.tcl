@@ -478,7 +478,7 @@ start_server {tags {"zset"}} {
             assert_equal {a 2 b 7 d 9 c 12} [r zrange zsetc 0 -1 withscores]
         }
 
-#        test "ZUNIONSTORE with a regular set and weights - $encoding" {
+        test "ZUNIONSTORE with a regular set and weights - $encoding" {
 #            r del seta
 #            r sadd seta a
 #            r sadd seta b

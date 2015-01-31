@@ -33,10 +33,10 @@ start_server {
         assert_equal {16 17} [lsort [r smembers myset]]
     }
 
-#    test {SADD against non set} {
-#        r lpush mylist foo
-#        assert_error WRONGTYPE* {r sadd mylist bar}
-#    }
+    test {SADD against non set} {
+        r lpush mylist foo
+        assert_error WRONGTYPE* {r sadd mylist bar}
+    }
 
     test "SADD a non-integer against an intset" {
         create_set myset {1 2 3}
@@ -246,15 +246,15 @@ start_server {
         }
     }
 
-#    test "SINTER against non-set should throw error" {
-#        r set key1 x
-#        assert_error "WRONGTYPE*" {r sinter key1 noset}
-#    }
+    test "SINTER against non-set should throw error" {
+        r set key1 x
+        assert_error "WRONGTYPE*" {r sinter key1 noset}
+    }
 
-#    test "SUNION against non-set should throw error" {
-#        r set key1 x
-#        assert_error "WRONGTYPE*" {r sunion key1 noset}
-#    }
+    test "SUNION against non-set should throw error" {
+        r set key1 x
+        assert_error "WRONGTYPE*" {r sunion key1 noset}
+    }
 
     test "SINTER should handle non existing key as empty" {
         r del set1 set2 set3
@@ -273,17 +273,17 @@ start_server {
         lsort [r sinter set1 set2]
     } {1 2 3}
 
-#    test "SINTERSTORE against non existing keys should delete dstkey" {
-#        r set setres xxx
-#        assert_equal 0 [r sinterstore setres foo111 bar222]
-#        assert_equal 0 [r exists setres]
-#    }
+    test "SINTERSTORE against non existing keys should delete dstkey" {
+        r set setres xxx
+        assert_equal 0 [r sinterstore setres foo111 bar222]
+        assert_equal 0 [r exists setres]
+    }
 
-#    test "SUNIONSTORE against non existing keys should delete dstkey" {
-#        r set setres xxx
-#        assert_equal 0 [r sunionstore setres foo111 bar222]
-#        assert_equal 0 [r exists setres]
-#    }
+    test "SUNIONSTORE against non existing keys should delete dstkey" {
+        r set setres xxx
+        assert_equal 0 [r sunionstore setres foo111 bar222]
+        assert_equal 0 [r exists setres]
+    }
 
     foreach {type contents} {hashtable {a b c} intset {1 2 3}} {
         test "SPOP basics - $type" {
@@ -476,15 +476,15 @@ start_server {
         assert_encoding intset myset3
     }
 
-#    test "SMOVE wrong src key type" {
-#        r set x 10
-#        assert_error "WRONGTYPE*" {r smove x myset2 foo}
-#    }
+    test "SMOVE wrong src key type" {
+        r set x 10
+        assert_error "WRONGTYPE*" {r smove x myset2 foo}
+    }
 
-#    test "SMOVE wrong dst key type" {
-#        r set x 10
-#        assert_error "WRONGTYPE*" {r smove myset2 x foo}
-#    }
+    test "SMOVE wrong dst key type" {
+        r set x 10
+        assert_error "WRONGTYPE*" {r smove myset2 x foo}
+    }
 
     test "SMOVE with identical source and destination" {
         r del set
