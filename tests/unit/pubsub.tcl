@@ -223,6 +223,7 @@ start_server {tags {"pubsub"}} {
         concat $reply1 $reply2
     } {punsubscribe {} 0 unsubscribe {} 0}
 
+    set COMMENTED_OUT {
     ### Keyspace events notification tests
 
     test "Keyspace notifications: we receive keyspace notifications" {
@@ -386,5 +387,6 @@ start_server {tags {"pubsub"}} {
         assert_equal {AK} [lindex [r config get notify-keyspace-events] 1]
         r config set notify-keyspace-events EA
         assert_equal {AE} [lindex [r config get notify-keyspace-events] 1]
+    }
     }
 }
