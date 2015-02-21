@@ -225,7 +225,7 @@ struct redisCommand redisCommandTable[] = {
     {"scan",redistorliteCommand,-2,"rR",0,NULL,0,0,0,0,0},
     {"dbsize",redistorliteCommand,1,"rF",0,NULL,0,0,0,0,0},
     {"auth",authCommand,2,"rsltF",0,NULL,0,0,0,0,0},
-    {"ping",pingCommand,-1,"rtF",0,NULL,0,0,0,0,0},
+    {"ping",redistorliteCommand,-1,"rtF",0,NULL,0,0,0,0,0},
     {"echo",redistorliteCommand,2,"rF",0,NULL,0,0,0,0,0},
     {"save",saveCommand,1,"ars",0,NULL,0,0,0,0,0},
     {"bgsave",bgsaveCommand,1,"ar",0,NULL,0,0,0,0,0},

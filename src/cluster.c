@@ -4433,7 +4433,7 @@ try_again:
     redisAssertWithInfo(c,NULL,rioWriteBulkString(&cmd,"SELECT",6));
     redisAssertWithInfo(c,NULL,rioWriteBulkLongLong(&cmd,dbid));
 
-    retval = rl_key_get(server.rlite->db, c->argv[3]->ptr, sdslen(c->argv[3]->ptr), NULL, NULL, NULL, &expireat);
+    retval = rl_key_get(server.rlite->db, c->argv[3]->ptr, sdslen(c->argv[3]->ptr), NULL, NULL, NULL, &expireat, NULL);
     if (retval != RL_FOUND) {
         rl_free(data);
         return;
