@@ -81,6 +81,9 @@ void discardTransaction(redisClient *c) {
 void flagTransaction(redisClient *c) {
     if (c->flags & REDIS_MULTI)
         c->flags |= REDIS_DIRTY_EXEC;
+    if (server.rlite->inTransaction) {
+        server.rlite->transactionFailed = 1;
+    }
 }
 
 void multiCommand(redisClient *c) {
