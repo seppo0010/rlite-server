@@ -240,7 +240,7 @@ struct redisCommand redisCommandTable[] = {
     {"psync",syncCommand,3,"ars",0,NULL,0,0,0,0,0},
     {"replconf",replconfCommand,-1,"arslt",0,NULL,0,0,0,0,0},
     {"flushdb",redistorliteCommand,1,"w",0,NULL,0,0,0,0,0},
-    {"flushall",flushallCommand,1,"w",0,NULL,0,0,0,0,0},
+    {"flushall",redistorliteCommand,1,"w",0,NULL,0,0,0,0,0},
     {"sort",redistorliteCommand,-2,"wm",0,sortGetKeys,1,1,1,0,0},
     {"info",infoCommand,-1,"rlt",0,NULL,0,0,0,0,0},
     {"monitor",monitorCommand,1,"ars",0,NULL,0,0,0,0,0},
