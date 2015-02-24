@@ -512,6 +512,7 @@ typedef struct readyList {
 typedef struct redisClient {
     uint64_t id;            /* Client incremental unique ID. */
     int fd;
+    int selected_db;
     redisDb *db;
     int dictid;
     robj *name;             /* As set by CLIENT SETNAME */

@@ -2028,6 +2028,8 @@ void call(redisClient *c, int flags) {
         replicationFeedMonitors(c,server.monitors,c->db->id,c->argv,c->argc);
     }
 
+    server.rlite->db->selected_database = c->selected_db;
+
     /* Call the command. */
     c->flags &= ~(REDIS_FORCE_AOF|REDIS_FORCE_REPL);
     redisOpArrayInit(&server.also_propagate);
@@ -2037,6 +2039,8 @@ void call(redisClient *c, int flags) {
     duration = ustime()-start;
     dirty = server.dirty-dirty;
     if (dirty < 0) dirty = 0;
+
+    c->selected_db = server.rlite->db->selected_database;
 
     /* When EVAL is called loading the AOF we don't want commands called
      * from Lua to go into the slowlog or to populate statistics. */
