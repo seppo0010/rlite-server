@@ -122,6 +122,7 @@ struct redisServer server; /* server global state */
  */
 static void writeCommand(int dbid, int argc, char **_argv, size_t *_argvlen);
 void redistorliteCommand(redisClient *c);
+struct redisCommand pubsubPing = {"ping",pingCommand,-1,"rtF",0,NULL,0,0,0,0,0};
 struct redisCommand redisCommandTable[] = {
     {"get",redistorliteCommand,2,"rF",0,NULL,1,1,1,0,0},
     {"set",redistorliteCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -2123,7 +2124,12 @@ int processCommand(redisClient *c) {
 
     /* Now lookup the command and check ASAP about trivial error conditions
      * such as wrong arity, bad command name and so forth. */
-    c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
+    if (strcasecmp(c->argv[0]->ptr, "ping") == 0 && c->flags & REDIS_PUBSUB) {
+        c->cmd = c->lastcmd = &pubsubPing;
+    } else {
+        c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
+    }
+
     if (!c->cmd) {
         flagTransaction(c);
         addReplyErrorFormat(c,"unknown command '%s'",
