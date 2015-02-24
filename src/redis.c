@@ -120,6 +120,7 @@ struct redisServer server; /* server global state */
  *    Note that commands that may trigger a DEL as a side effect (like SET)
  *    are not fast commands.
  */
+static void writeCommand(int dbid, int argc, char **_argv, size_t *_argvlen);
 void redistorliteCommand(redisClient *c);
 struct redisCommand redisCommandTable[] = {
     {"get",redistorliteCommand,2,"rF",0,NULL,1,1,1,0,0},
@@ -1731,6 +1732,7 @@ void initServer(void) {
     server.el = aeCreateEventLoop(server.maxclients+REDIS_EVENTLOOP_FDSET_INCR);
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
     server.rlite = rliteConnect(":memory:", 0);
+    server.rlite->writeCommand = writeCommand;
 
     /* Open the TCP listening socket for the user commands. */
     if (server.port != 0 &&
@@ -1970,9 +1972,30 @@ void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
                int flags)
 {
     if (server.aof_state != REDIS_AOF_OFF && flags & REDIS_PROPAGATE_AOF)
-        feedAppendOnlyFile(cmd,dbid,argv,argc);
+        feedAppendOnlyFile(dbid,argv,argc);
     if (flags & REDIS_PROPAGATE_REPL)
         replicationFeedSlaves(server.slaves,dbid,argv,argc);
+}
+
+static void writeCommand(int dbid, int argc, char **_argv, size_t *_argvlen) {
+    int i;
+    robj **argv = malloc(sizeof(robj*) * argc);
+    if (!argv) {
+        redisPanic("Redis aborting for OUT OF MEMORY");
+        return;
+    }
+
+    for (i = 0; i < argc; i++) {
+        argv[i] = createStringObject(_argv[i], _argvlen[i]);
+    }
+
+    feedAppendOnlyFile(dbid,argv,argc);
+    replicationFeedSlaves(server.slaves,dbid,argv,argc);
+
+    for (i = 0; i < argc; i++) {
+        decrRefCount(argv[i]);
+    }
+    free(argv);
 }
 
 /* Used inside commands to schedule the propagation of additional commands

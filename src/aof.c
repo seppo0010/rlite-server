@@ -464,7 +464,7 @@ sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
  * This command is used in order to translate EXPIRE and PEXPIRE commands
  * into PEXPIREAT command so that we retain precision in the append only
  * file, and the time is always absolute and not relative. */
-sds catAppendOnlyExpireAtCommand(sds buf, struct redisCommand *cmd, robj *key, robj *seconds) {
+sds catAppendOnlyExpireAtCommand(sds buf, robj *cmd, robj *key, robj *seconds) {
     long long when;
     robj *argv[3];
 
@@ -472,14 +472,14 @@ sds catAppendOnlyExpireAtCommand(sds buf, struct redisCommand *cmd, robj *key, r
     seconds = getDecodedObject(seconds);
     when = strtoll(seconds->ptr,NULL,10);
     /* Convert argument into milliseconds for EXPIRE, SETEX, EXPIREAT */
-    if (cmd->proc == expireCommand || cmd->proc == setexCommand ||
-        cmd->proc == expireatCommand)
+    if (strcasecmp(cmd->ptr, "expire") == 0 || strcasecmp(cmd->ptr, "setex") == 0 ||
+            strcasecmp(cmd->ptr, "expireat") == 0)
     {
         when *= 1000;
     }
     /* Convert into absolute time for EXPIRE, PEXPIRE, SETEX, PSETEX */
-    if (cmd->proc == expireCommand || cmd->proc == pexpireCommand ||
-        cmd->proc == setexCommand || cmd->proc == psetexCommand)
+    if (strcasecmp(cmd->ptr, "expire") == 0 || strcasecmp(cmd->ptr, "pexpire") == 0 ||
+            strcasecmp(cmd->ptr, "setex") == 0 || strcasecmp(cmd->ptr, "psetex") == 0)
     {
         when += mstime();
     }
@@ -494,7 +494,7 @@ sds catAppendOnlyExpireAtCommand(sds buf, struct redisCommand *cmd, robj *key, r
     return buf;
 }
 
-void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int argc) {
+void feedAppendOnlyFile(int dictid, robj **argv, int argc) {
     sds buf = sdsempty();
     robj *tmpargv[3];
 
@@ -509,18 +509,18 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
         server.aof_selected_db = dictid;
     }
 
-    if (cmd->proc == expireCommand || cmd->proc == pexpireCommand ||
-        cmd->proc == expireatCommand) {
+    if (strcasecmp(argv[0]->ptr, "expire") == 0 || strcasecmp(argv[0]->ptr, "pexpire") == 0 ||
+            strcasecmp(argv[0]->ptr, "expireat") == 0) {
         /* Translate EXPIRE/PEXPIRE/EXPIREAT into PEXPIREAT */
-        buf = catAppendOnlyExpireAtCommand(buf,cmd,argv[1],argv[2]);
-    } else if (cmd->proc == setexCommand || cmd->proc == psetexCommand) {
+        buf = catAppendOnlyExpireAtCommand(buf,argv[0],argv[1],argv[2]);
+    } else if (strcasecmp(argv[0]->ptr, "setex") == 0 || strcasecmp(argv[0]->ptr, "psetex") == 0) {
         /* Translate SETEX/PSETEX to SET and PEXPIREAT */
         tmpargv[0] = createStringObject("SET",3);
         tmpargv[1] = argv[1];
         tmpargv[2] = argv[3];
         buf = catAppendOnlyGenericCommand(buf,3,tmpargv);
         decrRefCount(tmpargv[0]);
-        buf = catAppendOnlyExpireAtCommand(buf,cmd,argv[1],argv[2]);
+        buf = catAppendOnlyExpireAtCommand(buf,argv[0],argv[1],argv[2]);
     } else {
         /* All the other commands don't need translation or need the
          * same translation already operated in the command vector
