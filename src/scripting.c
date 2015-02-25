@@ -970,7 +970,7 @@ void evalGenericCommand(redisClient *c, int evalsha) {
 
     /* Select the right DB in the context of the Lua client */
     selectDb(server.lua_client,c->db->id);
-    server.lua_client->selected_db = c->selected_db;
+    int selected_db = server.lua_client->selected_db = c->selected_db;
 
     /* Set a hook in order to be able to stop the script execution if it
      * is running for too much time.
@@ -1053,6 +1053,7 @@ void evalGenericCommand(redisClient *c, int evalsha) {
             forceCommandPropagation(c,REDIS_PROPAGATE_REPL|REDIS_PROPAGATE_AOF);
         }
     }
+    server.rlite->db->selected_database = c->selected_db = selected_db;
 }
 
 void evalCommand(redisClient *c) {
