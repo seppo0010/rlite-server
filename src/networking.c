@@ -1314,7 +1314,7 @@ sds catClientInfoString(sds s, redisClient *client) {
         (long long)(server.unixtime - client->ctime),
         (long long)(server.unixtime - client->lastinteraction),
         flags,
-        client->db->id,
+        client->selected_db,
         (int) dictSize(client->pubsub_channels),
         (int) listLength(client->pubsub_patterns),
         (client->flags & REDIS_MULTI) ? client->mstate.count : -1,
