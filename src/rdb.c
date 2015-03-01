@@ -605,6 +605,43 @@ off_t rdbSavedObjectLen(robj *o) {
     return len;
 }
 
+int rdbSaveRliteKey(rio *rdb, unsigned char *key, long keylen) {
+    unsigned char *data;
+    long datalen;
+    int retval = RL_OK;
+    unsigned long long expiretime;
+
+    retval = rl_key_get(server.rlite->db, key, keylen, NULL, NULL, NULL, &expiretime, NULL);
+    if (retval != RL_FOUND) goto cleanup;
+    /* Save the expire time */
+    if (expiretime != -1) {
+        if (rdbSaveType(rdb,REDIS_RDB_OPCODE_EXPIRETIME_MS) == -1) return -1;
+        if (rdbSaveMillisecondTime(rdb,expiretime) == -1) return -1;
+    }
+
+    retval = rl_dump(server.rlite->db, key, keylen, &data, &datalen);
+    if (retval != RL_OK) goto cleanup;
+
+    /* Save type, key, value */
+    if (rdbSaveType(rdb,data[0]) == -1) {
+        retval = -1;
+        goto cleanup;
+    }
+    if (rdbSaveRawString(rdb,key,keylen) == -1) {
+        retval = -1;
+        goto cleanup;
+    }
+    // first position is the type, last 10 are version and crc
+    if (rdbWriteRaw(rdb, &data[1], datalen - 11) == -1) {
+        retval = -1;
+        goto cleanup;
+    }
+
+cleanup:
+    if (retval == RL_NOT_FOUND) retval = RL_OK;
+    return retval;
+}
+
 /* Save a key-value pair, with expire time, type, key, value.
  * On error -1 is returned.
  * On success if the key was actually saved 1 is returned, otherwise 0
@@ -636,42 +673,42 @@ int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val,
  * integer pointed by 'error' is set to the value of errno just after the I/O
  * error. */
 int rdbSaveRio(rio *rdb, int *error) {
-    dictIterator *di = NULL;
-    dictEntry *de;
     char magic[10];
-    int j;
-    long long now = mstime();
+    int retval = 0, j, k;
     uint64_t cksum;
+    unsigned char **result = NULL;
+    long *resultlen = NULL;
+    long dbsize = 0;
 
     if (server.rdb_checksum)
         rdb->update_cksum = rioGenericUpdateChecksum;
     snprintf(magic,sizeof(magic),"REDIS%04d",REDIS_RDB_VERSION);
     if (rdbWriteRaw(rdb,magic,9) == -1) goto werr;
 
-    for (j = 0; j < server.dbnum; j++) {
-        redisDb *db = server.db+j;
-        dict *d = db->dict;
-        if (dictSize(d) == 0) continue;
-        di = dictGetSafeIterator(d);
-        if (!di) return REDIS_ERR;
+    int selected_db = server.rlite->db->selected_database;
+    for (j = 0; j < server.rlite->db->number_of_databases; j++) {
+        // TODO: this should use an iterator instead
+
+        server.rlite->db->selected_database = j;
+        if (rl_keys(server.rlite->db, "*", 1, &dbsize, &result, &resultlen) != 0) return REDIS_ERR;
+        if (dbsize == 0) continue;
 
         /* Write the SELECT DB opcode */
         if (rdbSaveType(rdb,REDIS_RDB_OPCODE_SELECTDB) == -1) goto werr;
         if (rdbSaveLen(rdb,j) == -1) goto werr;
 
-        /* Iterate this DB writing every entry */
-        while((de = dictNext(di)) != NULL) {
-            sds keystr = dictGetKey(de);
-            robj key, *o = dictGetVal(de);
-            long long expire;
-
-            initStaticStringObject(key,keystr);
-            expire = getExpire(db,&key);
-            if (rdbSaveKeyValuePair(rdb,&key,o,expire,now) == -1) goto werr;
+        for (k = 0; k < dbsize; k++) {
+            if ((retval = rdbSaveRliteKey(rdb, result[k], resultlen[k])) != RL_OK) goto werr;
         }
-        dictReleaseIterator(di);
+        for (k = 0; k < dbsize; k++) {
+            rl_free(result[k]);
+        }
+        rl_free(result);
+        rl_free(resultlen);
+        result = NULL;
+        resultlen = NULL;
     }
-    di = NULL; /* So that we don't release it again on error. */
+    server.rlite->db->selected_database = selected_db;
 
     /* EOF opcode */
     if (rdbSaveType(rdb,REDIS_RDB_OPCODE_EOF) == -1) goto werr;
@@ -684,8 +721,15 @@ int rdbSaveRio(rio *rdb, int *error) {
     return REDIS_OK;
 
 werr:
+    if (result) {
+        for (k = 0; k < dbsize; k++) {
+            rl_free(result[k]);
+        }
+        rl_free(result);
+        rl_free(resultlen);
+    }
+    server.rlite->db->selected_database = selected_db;
     if (error) *error = errno;
-    if (di) dictReleaseIterator(di);
     return REDIS_ERR;
 }
 
