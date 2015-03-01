@@ -971,6 +971,7 @@ void evalGenericCommand(redisClient *c, int evalsha) {
     /* Select the right DB in the context of the Lua client */
     selectDb(server.lua_client,c->db->id);
     int selected_db = server.lua_client->selected_db = c->selected_db;
+    server.rlite->inLuaScript = 1;
 
     /* Set a hook in order to be able to stop the script execution if it
      * is running for too much time.
@@ -988,6 +989,8 @@ void evalGenericCommand(redisClient *c, int evalsha) {
      * already defined, we can call it. We have zero arguments and expect
      * a single return value. */
     err = lua_pcall(lua,0,1,-2);
+
+    server.rlite->inLuaScript = 0;
 
     /* Perform some cleanup that we need to do both on error and success. */
     if (delhook) lua_sethook(lua,luaMaskCountHook,0,0); /* Disable hook */
