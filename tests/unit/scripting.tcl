@@ -552,23 +552,6 @@ start_server {tags {"scripting repl"}} {
             }
         }
 
-        test {Replication of script multiple pushes to list with BLPOP} {
-            set rd [redis_deferring_client]
-            $rd brpop a 0
-            r eval {
-                redis.call("lpush",KEYS[1],"1");
-                redis.call("lpush",KEYS[1],"2");
-            } 1 a
-            set res [$rd read]
-            $rd close
-            wait_for_condition 50 100 {
-                [r -1 lrange a 0 -1] eq [r lrange a 0 -1]
-            } else {
-                fail "Expected list 'a' in slave and master to be the same, but they are respectively '[r -1 lrange a 0 -1]' and '[r lrange a 0 -1]'"
-            }
-            set res
-        } {a 1}
-
         test {EVALSHA replication when first call is readonly} {
             r del x
             r eval {if tonumber(ARGV[1]) > 0 then redis.call('incr', KEYS[1]) end} 1 x 0
