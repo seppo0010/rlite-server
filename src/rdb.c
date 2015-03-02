@@ -272,7 +272,7 @@ int rdbSaveRawString(rio *rdb, unsigned char *s, size_t len) {
     int n, nwritten = 0;
 
     /* Try integer encoding */
-    if (len <= 11) {
+    if (len > 0 && len <= 11) {
         unsigned char buf[5];
         if ((enclen = rdbTryIntegerEncoding((char*)s,len,buf)) > 0) {
             if (rdbWriteRaw(rdb,buf,enclen) == -1) return -1;
@@ -1169,7 +1169,28 @@ void rdbLoadProgressCallback(rio *r, const void *buf, size_t len) {
     }
 }
 
+struct rl_rio_streamer {
+    rio *rdb;
+    int *type;
+};
+
+static int rl_to_rio_read(struct rl_restore_streamer *streamer, unsigned char *str, long len) {
+    struct rl_rio_streamer *rio_streamer = streamer->context;
+    if (rio_streamer->type) {
+        if (len == 1) {
+            int type = *rio_streamer->type;
+            rio_streamer->type = NULL;
+            *str = type;
+            return RL_OK;
+        } else {
+            return RL_UNEXPECTED;
+        }
+    }
+    return rioRead(rio_streamer->rdb, str, len) == 0 ? RL_UNEXPECTED : RL_OK;
+}
+
 int rdbLoad(char *filename) {
+    int retval;
     uint32_t dbid;
     int type, rdbver;
     redisDb *db = server.db+0;
@@ -1199,6 +1220,11 @@ int rdbLoad(char *filename) {
         return REDIS_ERR;
     }
 
+    rl_restore_streamer rlite_streamer;
+    struct rl_rio_streamer rio_streamer;
+    rio_streamer.rdb = &rdb;
+    rlite_streamer.context = &rio_streamer;
+    rlite_streamer.read = rl_to_rio_read;
     startLoading(fp);
     while(1) {
         robj *key, *val;
@@ -1233,28 +1259,23 @@ int rdbLoad(char *filename) {
                 exit(1);
             }
             db = server.db+dbid;
+            server.rlite->db->selected_database = dbid;
             continue;
         }
         /* Read key */
         if ((key = rdbLoadStringObject(&rdb)) == NULL) goto eoferr;
-        /* Read value */
-        if ((val = rdbLoadObject(type,&rdb)) == NULL) goto eoferr;
+        rio_streamer.type = &type;
+
         /* Check if the key already expired. This function is used when loading
          * an RDB file from disk, either at startup, or when an RDB was
          * received from the master. In the latter case, the master is
          * responsible for key expiry. If we would expire keys here, the
          * snapshot taken by the master may not be reflected on the slave. */
         if (server.masterhost == NULL && expiretime != -1 && expiretime < now) {
-            decrRefCount(key);
-            decrRefCount(val);
-            continue;
+            retval = rl_restore_stream(server.rlite->db, NULL, 0, 0, &rlite_streamer);
+        } else {
+            retval = rl_restore_stream(server.rlite->db, key->ptr, sdslen(key->ptr), 0, &rlite_streamer);
         }
-        /* Add the new object in the hash table */
-        dbAdd(db,key,val);
-
-        /* Set the expire time if needed */
-        if (expiretime != -1) setExpire(db,key,expiretime);
-
         decrRefCount(key);
     }
     /* Verify the checksum if RDB version is >= 5 */
